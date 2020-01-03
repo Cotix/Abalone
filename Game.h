@@ -65,7 +65,7 @@ class Game {
     __uint128_t get_neighbours(__uint128_t position, const int group_size, const __uint128_t group);
     __uint128_t get_groups(__uint128_t position, const int group_size, const int direction);
     __uint128_t make_groups(__uint128_t position, const int group_size, const int direction);
-    int generate_moves(int player, int depth, int alpha, int beta);
+    int generate_moves(int player, int depth, int alpha, int beta, bool play_best_move);
     __uint128_t get_sumitos(__uint128_t board, __uint128_t opponent, const int group_size, const int direction);
     int evaluate(int player, int depth, int alpha, int beta);
     unsigned int piece_count[4];

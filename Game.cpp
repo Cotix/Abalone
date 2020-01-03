@@ -30,19 +30,21 @@ const __uint128_t MSB = ONE<<127;
 
 __uint128_t *transpositions;
 // 8G = 268435367
+// 6G = 201326557
 // 4G = 134217689
+// 2G = 67108777
 // 1024MB = 33554393
 // 128MB = 4194301
 // 32MB = 1048573
-// 8MB = 262139
-// 2MB = 65521
+// 8MB = 262139, 262147
+// 2MB = 65521, 65537
 // 32768 per mb
 // There are two transposition tables
 // One that is meant to be accessed often, and should be smaller to prevent a lot of swapping
 // And one that is used for transpositions that took a lot of work and can be bigger (But not too big)
 // Somehow a huge transposition table actually decreases performance. This probably has to do with page swapping
-uint64_t transposition_size_short = 33554393; //
-uint64_t transposition_size_long = 33554393; // RAM
+uint64_t transposition_size_short = 134217689; //
+uint64_t transposition_size_long = 134217689; //
 uint64_t transposition_size = transposition_size_short+transposition_size_long;
 const __uint128_t PLAYING_FIELD =
         (((__uint128_t) 0b00000111110) << ROW_SIZE * 8)  +
@@ -54,6 +56,17 @@ const __uint128_t PLAYING_FIELD =
         (((__uint128_t) 0b01111111000) << ROW_SIZE * 2)  +
         (((__uint128_t) 0b01111110000) << ROW_SIZE * 1)  +
         (((__uint128_t) 0b01111100000) << ROW_SIZE * 0);
+
+const __uint128_t HOTSPOTS =
+        (((__uint128_t) 0b00000000000) << ROW_SIZE * 8)  +
+        (((__uint128_t) 0b00000000000) << ROW_SIZE * 7)  +
+        (((__uint128_t) 0b00000111000) << ROW_SIZE * 6)  +
+        (((__uint128_t) 0b00001111000) << ROW_SIZE * 5)  +
+        (((__uint128_t) 0b00011111000) << ROW_SIZE * 4)  +
+        (((__uint128_t) 0b00011110000) << ROW_SIZE * 3)  +
+        (((__uint128_t) 0b00011100000) << ROW_SIZE * 2)  +
+        (((__uint128_t) 0b00000000000) << ROW_SIZE * 1)  +
+        (((__uint128_t) 0b00000000000) << ROW_SIZE * 0);
 
 Game::Game(unsigned int players) {
     assert(players == 2);
@@ -80,18 +93,18 @@ Game::Game(unsigned int players) {
 void Game::daisy() {
     this->board[0] =
             (((__uint128_t) 0b00001100000) << ROW_SIZE * 0) |
-            (((__uint128_t) 0b00101010000) << ROW_SIZE * 1) |
+            (((__uint128_t) 0b00001110000) << ROW_SIZE * 1) |
             (((__uint128_t) 0b00000110000) << ROW_SIZE * 2) |
             (((__uint128_t) 0b00001100000) << ROW_SIZE * 6) |
-            (((__uint128_t) 0b00001010100) << ROW_SIZE * 7) |
+            (((__uint128_t) 0b00001110000) << ROW_SIZE * 7) |
             (((__uint128_t) 0b00000110000) << ROW_SIZE * 8);
 
     this->board[1] =
             (((__uint128_t) 0b01100000000) << ROW_SIZE * 0) |
-            (((__uint128_t) 0b01010100000) << ROW_SIZE * 1) |
+            (((__uint128_t) 0b01110000000) << ROW_SIZE * 1) |
             (((__uint128_t) 0b00110000000) << ROW_SIZE * 2) |
             (((__uint128_t) 0b00000001100) << ROW_SIZE * 6) |
-            (((__uint128_t) 0b00000101010) << ROW_SIZE * 7) |
+            (((__uint128_t) 0b00000001110) << ROW_SIZE * 7) |
             (((__uint128_t) 0b00000000110) << ROW_SIZE * 8);
     assert((this->board[0] & this->board[1]) == 0);
     assert(((this->board[0] | this->board[1]) & ~PLAYING_FIELD) == 0);
@@ -248,7 +261,8 @@ inline TranspositionData Game::trans_get(int player, bool check_transform) {
         return data;
     } else {
         data = this->trans_get_data(idx_long, player);
-        if (data.depth > 0) return data;
+        if (data.depth > 0)
+            return data;
     }
 
     if (data.depth == 0 && check_transform) {
@@ -289,7 +303,7 @@ inline void Game::trans_set(TranspositionData data) {
     transpositions[idx_short] |= (*((__uint128_t*) &data)) << (128ul-32ul);
 
     TranspositionData existing = this->trans_get_data(idx_long, data.player);
-    if (likely(existing.work < data.work)) {
+    if (existing.work < data.work) {
         transpositions[idx_long] = this->board[0] & PLAYING_FIELD;
         transpositions[idx_long + 1] = this->board[1] & PLAYING_FIELD;
         transpositions[idx_long] |= (*((__uint128_t *) &data)) << (128ul - 32ul);
@@ -297,14 +311,15 @@ inline void Game::trans_set(TranspositionData data) {
 }
 
 
-int Game::generate_moves(int player, int depth, int alpha, int beta){
+int Game::generate_moves(int player, int depth, int alpha, int beta, bool play_best_move){
     __uint128_t board = this->board[player];
     __uint128_t enemy = this->board[player^1];
     __uint128_t invalid = board | enemy | ~PLAYING_FIELD;
     __uint128_t valid = ~invalid;
+    __uint128_t best_boards[2] = {0,0};
     int tmp = 0;
 
-    int best = -15;
+    int best = -127;
     // sumitos
     for (int group_size = 3; group_size >= 2; --group_size) {
         const int* direction = DIRECTIONS;
@@ -321,7 +336,10 @@ int Game::generate_moves(int player, int depth, int alpha, int beta){
                 this->board[player] = (this->board[player] ^ my_source ^ my_target) & PLAYING_FIELD;
                 this->board[player^1] = (this->board[player^1] ^ op_source ^ op_target) & PLAYING_FIELD;
                 tmp = this->evaluate(player, depth, alpha, beta);
-                best = MAX(best, tmp);
+                if (tmp > best) {
+                    best = tmp;
+                    best_boards[0] = this->board[0];best_boards[1] = this->board[1];
+                }
                 alpha = MAX(alpha, tmp);
                 this->board[player] = (this->board[player] ^ my_source ^ my_target) & PLAYING_FIELD;
                 this->board[player^1] = (this->board[player^1] ^ op_source ^ op_target) & PLAYING_FIELD;
@@ -335,7 +353,8 @@ int Game::generate_moves(int player, int depth, int alpha, int beta){
 
     // Inline moves
     for (int group_size = 3; group_size >= 1; --group_size) {
-        __uint128_t moves = this->get_neighbours(board, group_size, board) & valid;
+        __uint128_t moves_total = this->get_neighbours(board, group_size, board) & valid;
+        __uint128_t moves = moves_total & HOTSPOTS;
         while (moves != 0) {
             __uint128_t move = (moves & ~(moves - 1));
             __uint128_t sources = this->get_neighbours(move, group_size, board|move) & board;
@@ -343,7 +362,31 @@ int Game::generate_moves(int player, int depth, int alpha, int beta){
                 __uint128_t piece = (sources & ~(sources - 1));
                 this->board[player] ^= move ^ piece;
                 tmp = this->evaluate(player, depth, alpha, beta);
-                best = MAX(best, tmp);
+                if (tmp > best) {
+                    best = tmp;
+                    best_boards[0] = this->board[0];best_boards[1] = this->board[1];
+                }
+                alpha = MAX(alpha, tmp);
+                this->board[player] ^= move ^ piece;
+                if (alpha >= beta) {
+                    return alpha;
+                }
+                sources = sources ^ piece;
+            }
+            moves = moves ^ move;
+        }
+        moves = moves_total & ~HOTSPOTS;
+        while (moves != 0) {
+            __uint128_t move = (moves & ~(moves - 1));
+            __uint128_t sources = this->get_neighbours(move, group_size, board|move) & board;
+            while (sources != 0) {
+                __uint128_t piece = (sources & ~(sources - 1));
+                this->board[player] ^= move ^ piece;
+                tmp = this->evaluate(player, depth, alpha, beta);
+                if (tmp > best) {
+                    best = tmp;
+                    best_boards[0] = this->board[0];best_boards[1] = this->board[1];
+                }
                 alpha = MAX(alpha, tmp);
                 this->board[player] ^= move ^ piece;
                 if (alpha >= beta) {
@@ -371,7 +414,10 @@ int Game::generate_moves(int player, int depth, int alpha, int beta){
                     __uint128_t sources = SHIFT(targets, -*direction);
                     this->board[player] ^= targets ^ sources;
                     tmp = this->evaluate(player, depth, alpha, beta);
-                    best = MAX(best, tmp);
+                    if (tmp > best) {
+                        best = tmp;
+                        best_boards[0] = this->board[0];best_boards[1] = this->board[1];
+                    }
                     alpha = MAX(alpha, tmp);
                     this->board[player] ^= targets ^ sources;
                     if (alpha >= beta) {
@@ -385,7 +431,10 @@ int Game::generate_moves(int player, int depth, int alpha, int beta){
         }
     }
 
-
+    if (play_best_move){
+        this->board[0] = best_boards[0];
+        this->board[1] = best_boards[1];
+    }
     return best;
 }
 
@@ -455,15 +504,15 @@ int Game::evaluate(int player, int depth, int alpha, int beta) {
     } else if (this->piece_count[player^1] - count_bits(this->board[player^1]) >= 6){
         return 127;
     } else {
-        TranspositionData stub_result(player, depth, 0, 1, FLAG_EXACT, 10);
+        TranspositionData stub_result(player, depth, 0, 1, FLAG_EXACT, 0);
         this->trans_set(stub_result);
-        score = -this->generate_moves(player ^ 1, depth - 1, -beta, -alpha);
+        score = -this->generate_moves(player ^ 1, depth - 1, -beta, -alpha, 0);
         if (this->trans_get(player, false).stub == 1) {
             TranspositionData clear_result(player, 0, 0, 0, 0, 0);
             this->trans_set(clear_result);
         }
     }
-    work = (this->position_evaluated - work) >> 10; // Threshold low work positions
+    work = (this->position_evaluated - work) >> 8; // Threshold low work positions
     int flag = score <= orig_alpha ? FLAG_UPPER : (score >= beta ? FLAG_LOWER : FLAG_EXACT);
     TranspositionData result(player, depth, score, 0, flag, log2(work));
     this->trans_set(result);
