@@ -155,7 +155,6 @@ inline __uint8_t reverse_byte(__uint8_t b) {
     return ((b * 0x80200802ULL) & 0x0884422110ULL) * 0x0101010101ULL >> 32;
 }
 
-
 inline __uint128_t flip_board(__uint128_t board) {
     unsigned int rows[9] = {0,0,0,0,0,0,0,0,0};
     rows[0] = reverse_byte((board>>(ROW_SIZE * 0 + 5)) & 0xFF) << 2;
@@ -336,7 +335,7 @@ int Game::generate_moves(int player, int depth, int alpha, int beta, bool play_b
                 this->board[player] = (this->board[player] ^ my_source ^ my_target) & PLAYING_FIELD;
                 this->board[player^1] = (this->board[player^1] ^ op_source ^ op_target) & PLAYING_FIELD;
                 tmp = this->evaluate(player, depth, alpha, beta);
-                if (tmp > best) {
+                if (tmp > best || (tmp == best && (this->position_evaluated&0b111) == 0b111)) {
                     best = tmp;
                     best_boards[0] = this->board[0];best_boards[1] = this->board[1];
                 }
@@ -362,7 +361,7 @@ int Game::generate_moves(int player, int depth, int alpha, int beta, bool play_b
                 __uint128_t piece = (sources & ~(sources - 1));
                 this->board[player] ^= move ^ piece;
                 tmp = this->evaluate(player, depth, alpha, beta);
-                if (tmp > best) {
+                if (tmp > best || (tmp == best && (this->position_evaluated&0b111) == 0b111)) {
                     best = tmp;
                     best_boards[0] = this->board[0];best_boards[1] = this->board[1];
                 }
@@ -383,7 +382,7 @@ int Game::generate_moves(int player, int depth, int alpha, int beta, bool play_b
                 __uint128_t piece = (sources & ~(sources - 1));
                 this->board[player] ^= move ^ piece;
                 tmp = this->evaluate(player, depth, alpha, beta);
-                if (tmp > best) {
+                if (tmp > best || (tmp == best && (this->position_evaluated&0b111) == 0b111)) {
                     best = tmp;
                     best_boards[0] = this->board[0];best_boards[1] = this->board[1];
                 }
@@ -414,7 +413,7 @@ int Game::generate_moves(int player, int depth, int alpha, int beta, bool play_b
                     __uint128_t sources = SHIFT(targets, -*direction);
                     this->board[player] ^= targets ^ sources;
                     tmp = this->evaluate(player, depth, alpha, beta);
-                    if (tmp > best) {
+                    if (tmp > best || (tmp == best && (this->position_evaluated&0b111) == 0b111)) {
                         best = tmp;
                         best_boards[0] = this->board[0];best_boards[1] = this->board[1];
                     }
