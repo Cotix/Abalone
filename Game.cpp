@@ -41,8 +41,8 @@ __uint128_t *transpositions;
 // One that is meant to be accessed often, and should be smaller to prevent a lot of swapping
 // And one that is used for transpositions that took a lot of work and can be bigger (But not too big)
 // Somehow a huge transposition table actually decreases performance. This probably has to do with page swapping
-uint64_t transposition_size_short = 4194301; //
-uint64_t transposition_size_long = 134217689; // RAM
+uint64_t transposition_size_short = 33554393; //
+uint64_t transposition_size_long = 33554393; // RAM
 uint64_t transposition_size = transposition_size_short+transposition_size_long;
 const __uint128_t PLAYING_FIELD =
         (((__uint128_t) 0b00000111110) << ROW_SIZE * 8)  +
@@ -108,7 +108,7 @@ void Game::random_position(int stones) {
         for (int p = 0; p != 2; ++p) {
             __uint128_t stone = 0;
             while ((stone & PLAYING_FIELD & (~(this->board[0] | this->board[1]))) == 0)
-                stone = ONE << (rand() % 100);
+                stone = ONE << (rand() % 35);
             this->board[p] |= stone;
         }
     }
@@ -227,9 +227,9 @@ inline TranspositionData Game::trans_get_data(uint64_t idx, int player) {
     __uint128_t b2 = transpositions[idx + 1];
     int d = (transpositions[idx]>>(128ul-32ul));
     TranspositionData data = *((TranspositionData*) &d);
-    if ((b1&PLAYING_FIELD) == (this->board[0]&PLAYING_FIELD) &&
+    if (likely((b1&PLAYING_FIELD) == (this->board[0]&PLAYING_FIELD) &&
         (b2&PLAYING_FIELD) == (this->board[1]&PLAYING_FIELD) &&
-        data.player == player) {
+        data.player == player)) {
         return data;
     } else if (b1 != 0 && b2 != 0) {
         //colision
@@ -244,7 +244,7 @@ inline TranspositionData Game::trans_get(int player, bool check_transform) {
     uint64_t idx_long = (hash % transposition_size_long) * 2 + transposition_size_short*2;
     TranspositionData data = this->trans_get_data(idx_short, player);
 
-    if (data.depth > 0) {
+    if (likely(data.depth > 0)) {
         return data;
     } else {
         data = this->trans_get_data(idx_long, player);
@@ -289,7 +289,7 @@ inline void Game::trans_set(TranspositionData data) {
     transpositions[idx_short] |= (*((__uint128_t*) &data)) << (128ul-32ul);
 
     TranspositionData existing = this->trans_get_data(idx_long, data.player);
-    if (existing.work < data.work) {
+    if (likely(existing.work < data.work)) {
         transpositions[idx_long] = this->board[0] & PLAYING_FIELD;
         transpositions[idx_long + 1] = this->board[1] & PLAYING_FIELD;
         transpositions[idx_long] |= (*((__uint128_t *) &data)) << (128ul - 32ul);
@@ -391,11 +391,11 @@ int Game::generate_moves(int player, int depth, int alpha, int beta){
 
 int Game::heuristic(int player) {
     int score = this->get_score() * (1 - 2*player)*10;
-    int threegroups = count_bits(this->get_neighbours(this->board[player], 3, this->board[player]));
-    threegroups = threegroups * 15 / this->piece_count[player];
-    int enemygroups = count_bits(this->get_neighbours(this->board[player^1], 3, this->board[player^1]));
-    enemygroups = enemygroups * 15 / this->piece_count[player^1];
-    score += threegroups - enemygroups;
+//    int threegroups = count_bits(this->get_neighbours(this->board[player], 3, this->board[player]));
+//    threegroups = threegroups * 15 / this->piece_count[player];
+//    int enemygroups = count_bits(this->get_neighbours(this->board[player^1], 3, this->board[player^1]));
+//    enemygroups = enemygroups * 15 / this->piece_count[player^1];
+//    score += threegroups - enemygroups;
     return score;
 }
 
@@ -420,6 +420,10 @@ int log2(uint64_t v) {
 
 int Game::evaluate(int player, int depth, int alpha, int beta) {
     this->position_evaluated++;
+    int current_score = (this->get_score() * (1 - 2*player))*10;
+    if (current_score + ((depth-1)/2)*10 <= alpha) return current_score + ((depth-1)/2);
+    if (current_score - ((depth)/2)*10 >= beta) return current_score - (depth/2);
+
     TranspositionData data = this->trans_get(player, false);
     int orig_alpha = alpha;
     int orig_beta = beta;
