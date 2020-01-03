@@ -8,12 +8,13 @@ void benchmark() {
     game.generate_moves(0, 8, -127, 127, 0);
     for (int i = 0; i != 10; ++i) {
         game.random_position(6);
-        game.generate_moves(0, 14, -127, 127, 0);
+        game.generate_moves(0, 10, -127, 127, 0);
     }
     game.daisy();
     game.generate_moves(0, 10, -127, 127, 0);
 
     std::cout << game.position_evaluated << std::endl;
+    // Prints 111396198 on commit 375c5b9 in 7sec user time 9.3 sec realtime
 }
 
 void demo_play() {
