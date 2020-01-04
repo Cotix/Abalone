@@ -68,6 +68,17 @@ const __uint128_t HOTSPOTS =
         (((__uint128_t) 0b00000000000) << ROW_SIZE * 1)  +
         (((__uint128_t) 0b00000000000) << ROW_SIZE * 0);
 
+const __uint128_t OUTER_RING =
+        (((__uint128_t) 0b00000111110) << ROW_SIZE * 8)  +
+        (((__uint128_t) 0b00001000010) << ROW_SIZE * 7)  +
+        (((__uint128_t) 0b00010000010) << ROW_SIZE * 6)  +
+        (((__uint128_t) 0b00100000010) << ROW_SIZE * 5)  +
+        (((__uint128_t) 0b01000000010) << ROW_SIZE * 4)  +
+        (((__uint128_t) 0b01000000100) << ROW_SIZE * 3)  +
+        (((__uint128_t) 0b01000001000) << ROW_SIZE * 2)  +
+        (((__uint128_t) 0b01000010000) << ROW_SIZE * 1)  +
+        (((__uint128_t) 0b01000100000) << ROW_SIZE * 0);
+
 Game::Game(unsigned int players) {
     assert(players == 2);
     transpositions = static_cast<__uint128_t *>(malloc(transposition_size*sizeof(__uint128_t)*2));
@@ -439,11 +450,8 @@ int Game::generate_moves(int player, int depth, int alpha, int beta, bool play_b
 
 int Game::heuristic(int player) {
     int score = this->get_score() * (1 - 2*player)*10;
-//    int threegroups = count_bits(this->get_neighbours(this->board[player], 3, this->board[player]));
-//    threegroups = threegroups * 15 / this->piece_count[player];
-//    int enemygroups = count_bits(this->get_neighbours(this->board[player^1], 3, this->board[player^1]));
-//    enemygroups = enemygroups * 15 / this->piece_count[player^1];
-//    score += threegroups - enemygroups;
+    score += count_bits(this->board[player]&HOTSPOTS) - count_bits(this->board[player^1]&HOTSPOTS);
+    score += (count_bits(this->board[player^1]&OUTER_RING) - count_bits(this->board[player]&OUTER_RING))*2;
     return score;
 }
 
