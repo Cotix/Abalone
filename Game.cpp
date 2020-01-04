@@ -28,7 +28,7 @@ const int TANGENT_DIRECTIONS[] = {LEFT, UP_RIGHT, 0, LEFT, UP_LEFT, 0, UP_LEFT, 
 const __uint128_t ONE = 1;
 const __uint128_t MSB = ONE<<127;
 
-__uint128_t *transpositions;
+__uint128_t *transpositions = 0;
 // 8G = 268435367
 // 6G = 201326557
 // 4G = 134217689
@@ -447,6 +447,14 @@ int Game::heuristic(int player) {
     return score;
 }
 
+int Game::has_won(int player) {
+    return this->piece_count[player^1] - count_bits(this->board[player^1]) >= 6;
+}
+
+int Game::is_over() {
+    return this->has_won(0) || this->has_won(1);
+}
+
 int log2(uint64_t v) {
     if ((v&0xFFFFFFFF00000000ul) != 0) return 31;
     int r;      // result goes here
@@ -497,12 +505,13 @@ int Game::evaluate(int player, int depth, int alpha, int beta) {
 
     int score = 0;
     int work = this->position_evaluated;
-    if (depth == 1) {
+    if (this->has_won(player)){
+        // TODO: Max depth is now 27 because of the max value of score
+        return 100+depth;
+    } else if (depth == 1) {
 //        std::cout << this->to_string() << std::endl;
         score = this->heuristic(player);
-    } else if (this->piece_count[player^1] - count_bits(this->board[player^1]) >= 6){
-        return 127;
-    } else {
+    } else  {
         TranspositionData stub_result(player, depth, 0, 1, FLAG_EXACT, 0);
         this->trans_set(stub_result);
         score = -this->generate_moves(player ^ 1, depth - 1, -beta, -alpha, 0);

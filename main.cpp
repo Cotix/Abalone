@@ -1,4 +1,6 @@
 #include <iostream>
+#include <unistd.h>
+#include <cstring>
 #include "Game.h"
 
 
@@ -18,18 +20,26 @@ void benchmark() {
 }
 
 void demo_play() {
+    srand(time(0));
     Game game = Game(2);
-    game.daisy();
+//    game.daisy();
     int player = 0;
-    while (true) {
+    int moves = 0;
+    while (!game.is_over()) {
+        moves++;
+        game.position_evaluated = rand()&0b111; // small random initializer
         std::cout << game.to_string() << std::endl;
-        game.position_evaluated = 0;
-        std::cout << game.generate_moves(player, 10, -127, 127, 1) << std::endl << game.position_evaluated << std::endl;
+        std::cout << "Current score: " << game.get_score() << std::endl << std::endl;
+        std::cout << "Expected by: " << (player == 0 ? 'A' : 'B') << ": "
+                  << game.generate_moves(player, 7, -127, 127, 1)
+                  << std::endl << game.position_evaluated << std::endl << std::endl;
         player ^= 1;
     }
+    std::cout << "Game won by " << (game.has_won(0) ? 'A' : 'B') << " in " << moves << " moves." << std::endl;
+
 }
 
 int main() {
-    benchmark();
+    demo_play();
     return 0;
 }

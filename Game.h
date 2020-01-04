@@ -94,6 +94,10 @@ class Game {
     void random_position(int stones);
 
     void transform();
+
+    int has_won(int player);
+
+    int is_over();
 };
 
 
