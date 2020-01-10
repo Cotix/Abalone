@@ -59,8 +59,10 @@ struct TranspositionData {
 
 class Game {
     unsigned int players;
+    __uint128_t *transpositions = 0;
     std::string _print_bits(unsigned int from, unsigned int to);
-    public:
+    bool experimental;
+public:
 
     __uint128_t get_neighbours(__uint128_t position, const int group_size, const __uint128_t group);
     __uint128_t get_groups(__uint128_t position, const int group_size, const int direction);
@@ -70,7 +72,8 @@ class Game {
     int evaluate(int player, int depth, int alpha, int beta);
     unsigned int piece_count[4];
 
-    Game(unsigned int players);
+    Game(unsigned int players, bool experimental);
+    ~Game();
 
     std::string to_string();
 

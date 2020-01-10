@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <cstring>
 #include "Game.h"
+#include <algorithm>
+#include <array>
 
 #define likely(x)      __builtin_expect(!!(x), 1)
 #define unlikely(x)    __builtin_expect(!!(x), 0)
@@ -28,7 +30,7 @@ const int TANGENT_DIRECTIONS[] = {LEFT, UP_RIGHT, 0, LEFT, UP_LEFT, 0, UP_LEFT, 
 const __uint128_t ONE = 1;
 const __uint128_t MSB = ONE<<127;
 
-__uint128_t *transpositions = 0;
+
 // 8G = 268435367
 // 6G = 201326557
 // 4G = 134217689
@@ -43,8 +45,8 @@ __uint128_t *transpositions = 0;
 // One that is meant to be accessed often, and should be smaller to prevent a lot of swapping
 // And one that is used for transpositions that took a lot of work and can be bigger (But not too big)
 // Somehow a huge transposition table actually decreases performance. This probably has to do with page swapping
-uint64_t transposition_size_short = 134217689; //
-uint64_t transposition_size_long = 134217689; //
+uint64_t transposition_size_short = 4194301; //
+uint64_t transposition_size_long = 4194301; //
 uint64_t transposition_size = transposition_size_short+transposition_size_long;
 const __uint128_t PLAYING_FIELD =
         (((__uint128_t) 0b00000111110) << ROW_SIZE * 8)  +
@@ -79,10 +81,15 @@ const __uint128_t OUTER_RING =
         (((__uint128_t) 0b01000010000) << ROW_SIZE * 1)  +
         (((__uint128_t) 0b01000100000) << ROW_SIZE * 0);
 
-Game::Game(unsigned int players) {
+Game::~Game() {
+    free(transpositions);
+}
+
+Game::Game(unsigned int players, bool experimental) {
     assert(players == 2);
     transpositions = static_cast<__uint128_t *>(malloc(transposition_size*sizeof(__uint128_t)*2));
     memset(transpositions, 0, sizeof(__uint128_t) * transposition_size*2);
+    this->experimental = experimental;
     this->board[2] = 0;
     this->board[3] = 0;
     this->players = players;
@@ -186,14 +193,14 @@ inline __uint128_t flip_board(__uint128_t board) {
     rows[8] = reverse_byte((board>>(ROW_SIZE * 8 + 1)) & 0xFF) >> 2;
 
     return (((__uint128_t) rows[0]) << ROW_SIZE*0) |
-            (((__uint128_t) rows[1]) << ROW_SIZE*1) |
-            (((__uint128_t) rows[2]) << ROW_SIZE*2) |
-            (((__uint128_t) rows[3]) << ROW_SIZE*3) |
-            (((__uint128_t) rows[4]) << ROW_SIZE*4) |
-            (((__uint128_t) rows[5]) << ROW_SIZE*5) |
-            (((__uint128_t) rows[6]) << ROW_SIZE*6) |
-            (((__uint128_t) rows[7]) << ROW_SIZE*7) |
-            (((__uint128_t) rows[8]) << ROW_SIZE*8);
+           (((__uint128_t) rows[1]) << ROW_SIZE*1) |
+           (((__uint128_t) rows[2]) << ROW_SIZE*2) |
+           (((__uint128_t) rows[3]) << ROW_SIZE*3) |
+           (((__uint128_t) rows[4]) << ROW_SIZE*4) |
+           (((__uint128_t) rows[5]) << ROW_SIZE*5) |
+           (((__uint128_t) rows[6]) << ROW_SIZE*6) |
+           (((__uint128_t) rows[7]) << ROW_SIZE*7) |
+           (((__uint128_t) rows[8]) << ROW_SIZE*8);
 };
 
 void Game::transform() {
@@ -251,8 +258,8 @@ inline TranspositionData Game::trans_get_data(uint64_t idx, int player) {
     int d = (transpositions[idx]>>(128ul-32ul));
     TranspositionData data = *((TranspositionData*) &d);
     if (likely((b1&PLAYING_FIELD) == (this->board[0]&PLAYING_FIELD) &&
-        (b2&PLAYING_FIELD) == (this->board[1]&PLAYING_FIELD) &&
-        data.player == player)) {
+               (b2&PLAYING_FIELD) == (this->board[1]&PLAYING_FIELD) &&
+               data.player == player)) {
         return data;
     } else if (b1 != 0 && b2 != 0) {
         //colision
@@ -450,8 +457,8 @@ int Game::generate_moves(int player, int depth, int alpha, int beta, bool play_b
 
 int Game::heuristic(int player) {
     int score = this->get_score() * (1 - 2*player)*10;
-    score += count_bits(this->board[player]&HOTSPOTS) - count_bits(this->board[player^1]&HOTSPOTS);
-    score += (count_bits(this->board[player^1]&OUTER_RING) - count_bits(this->board[player]&OUTER_RING))*2;
+    score += count_bits(this->board[player] & HOTSPOTS) - count_bits(this->board[player ^ 1] & HOTSPOTS);
+    score += (count_bits(this->board[player ^ 1] & OUTER_RING) - count_bits(this->board[player] & OUTER_RING)) * 2;
     return score;
 }
 
@@ -485,8 +492,7 @@ int log2(uint64_t v) {
 int Game::evaluate(int player, int depth, int alpha, int beta) {
     this->position_evaluated++;
     int current_score = (this->get_score() * (1 - 2*player))*10;
-    if (current_score + ((depth-1)/2)*10 <= alpha) return current_score + ((depth-1)/2);
-    if (current_score - ((depth)/2)*10 >= beta) return current_score - (depth/2);
+    if (current_score - ((depth)/2)*11 >= beta) return current_score - (depth/2);
 
     TranspositionData data = this->trans_get(player, false);
     int orig_alpha = alpha;
@@ -504,12 +510,20 @@ int Game::evaluate(int player, int depth, int alpha, int beta) {
         }
     }
 
+    if (this->experimental) {
+        int temp_score = this->heuristic(player);
+        if (temp_score > beta) {
+            return temp_score;
+        }
+    }
+
     if (data.depth > depth && data.stub == 1) {
         // Draw!
 //        TranspositionData draw_result(player, depth, 0, 0, FLAG_LOWER, 0);
 //        this->trans_set(draw_result);
         return 0;
     }
+
 
     int score = 0;
     int work = this->position_evaluated;
