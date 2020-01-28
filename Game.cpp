@@ -45,8 +45,8 @@ const __uint128_t MSB = ONE<<127;
 // One that is meant to be accessed often, and should be smaller to prevent a lot of swapping
 // And one that is used for transpositions that took a lot of work and can be bigger (But not too big)
 // Somehow a huge transposition table actually decreases performance. This probably has to do with page swapping
-uint64_t transposition_size_short = 4194301; //
-uint64_t transposition_size_long = 4194301; //
+uint64_t transposition_size_short = 33554393; //
+uint64_t transposition_size_long = 33554393; //
 uint64_t transposition_size = transposition_size_short+transposition_size_long;
 const __uint128_t PLAYING_FIELD =
         (((__uint128_t) 0b00000111110) << ROW_SIZE * 8)  +
@@ -328,7 +328,210 @@ inline void Game::trans_set(TranspositionData data) {
 }
 
 
-int Game::generate_moves(int player, int depth, int alpha, int beta, bool play_best_move){
+int Game::get_possible_moves(int player, __uint128_t *move_boards){
+    __uint128_t board = this->board[player];
+    __uint128_t enemy = this->board[player^1];
+    __uint128_t invalid = board | enemy | ~PLAYING_FIELD;
+    __uint128_t valid = ~invalid;
+    __uint128_t best_boards[2] = {0,0};
+
+    int move_pointer = 0;
+
+    // sumitos
+    for (int group_size = 3; group_size >= 2; --group_size) {
+        const int* direction = DIRECTIONS;
+        for (; direction != &DIRECTIONS[DIRECTION_COUNT]; ++direction) {
+            __uint128_t moves = this->get_sumitos(board, enemy, group_size, *direction);
+
+            while (moves != 0) {
+                __uint128_t move = (moves & ~(moves - 1));
+                __uint128_t mask = this->make_groups(move, group_size*2 - 1, -*direction);
+                __uint128_t my_source = board & mask;
+                __uint128_t my_target = SHIFT(my_source, *direction);
+                __uint128_t op_source = enemy & mask;
+                __uint128_t op_target = SHIFT(op_source, *direction);
+                this->board[player] = (this->board[player] ^ my_source ^ my_target) & PLAYING_FIELD;
+                this->board[player^1] = (this->board[player^1] ^ op_source ^ op_target) & PLAYING_FIELD;
+                move_boards[move_pointer*2] = this->board[0];
+                move_boards[move_pointer++*2 + 1] = this->board[1];
+                this->board[player] = (this->board[player] ^ my_source ^ my_target) & PLAYING_FIELD;
+                this->board[player^1] = (this->board[player^1] ^ op_source ^ op_target) & PLAYING_FIELD;
+                moves = moves ^ move;
+            }
+        }
+    }
+
+    // Inline moves
+    for (int group_size = 3; group_size >= 1; --group_size) {
+        __uint128_t moves_total = this->get_neighbours(board, group_size, board) & valid;
+        __uint128_t moves = moves_total;
+        while (moves != 0) {
+            __uint128_t move = (moves & ~(moves - 1));
+            __uint128_t sources = this->get_neighbours(move, group_size, board|move) & board;
+            while (sources != 0) {
+                __uint128_t piece = (sources & ~(sources - 1));
+                this->board[player] ^= move ^ piece;
+                move_boards[move_pointer*2] = this->board[0];
+                move_boards[move_pointer++*2 + 1] = this->board[1];
+                this->board[player] ^= move ^ piece;
+                sources = sources ^ piece;
+            }
+            moves = moves ^ move;
+        }
+    }
+
+
+    // Sideway moves
+    for (int group_size = 3; group_size >= 2; --group_size) {
+        const int* direction = DIRECTIONS;
+        const int* tangent = TANGENT_DIRECTIONS;
+        for (; direction != &DIRECTIONS[DIRECTION_COUNT]; ++direction) {
+            __uint128_t neighbours = (SHIFT(board, *direction) & valid);
+            while(*tangent != 0) {
+                __uint128_t moves = this->get_groups(neighbours, group_size, *tangent);
+
+                while (moves != 0) {
+                    __uint128_t move = (moves & ~(moves - 1));
+                    __uint128_t targets = this->make_groups(move, group_size, -*tangent);
+                    __uint128_t sources = SHIFT(targets, -*direction);
+                    this->board[player] ^= targets ^ sources;
+                    move_boards[move_pointer*2] = this->board[0];
+                    move_boards[move_pointer++*2 + 1] = this->board[1];
+                    this->board[player] ^= targets ^ sources;
+                    moves = moves ^ move;
+                }
+                tangent++;
+            }
+            tangent++;
+        }
+    }
+
+    return move_pointer;
+}
+
+int Game::negamax_use_movegenerator(int player, int depth, int alpha, int beta, bool play_best_move) {
+    __uint128_t board = this->board[player];
+    __uint128_t enemy = this->board[player^1];
+    __uint128_t invalid = board | enemy | ~PLAYING_FIELD;
+    __uint128_t valid = ~invalid;
+    __uint128_t best_boards[2] = {0,0};
+    __uint128_t original_boards[2] = {this->board[0], this->board[1]};
+    int tmp = 0;
+
+    int best = -127;
+    __uint128_t moves[1024];
+    int scores[512];
+    int sorted_moves[512];
+    int move_count = this->get_possible_moves(player, moves);
+    assert(move_count < 512);
+    for (int i = 0; i != move_count; ++i) {
+        sorted_moves[i] = i;
+        this->board[0] = moves[i*2];
+        this->board[1] = moves[i*2 + 1];
+        scores[i] = this->heuristic(player);
+    }
+    std::sort(sorted_moves, sorted_moves + move_count, [scores](int const (&a), int const (&b)) -> bool {
+        return scores[a] > scores[b];
+    } );
+    for (int i = 0; i != move_count; ++i) {
+        int idx = sorted_moves[i]*2;
+        this->board[0] = moves[idx];
+        this->board[1] = moves[idx+1];
+        int score = this->evaluate(player, depth, alpha, beta);
+        if (score > best) {
+            best = score;
+            best_boards[0] = this->board[0];
+            best_boards[1] = this->board[1];
+        }
+        alpha = MAX(alpha, score);
+        if (score >= beta) {
+            break;
+        }
+    }
+    if (play_best_move){
+        this->board[0] = best_boards[0];
+        this->board[1] = best_boards[1];
+    } else {
+        this->board[0] = original_boards[0];
+        this->board[1] = original_boards[1];
+    }
+    return best;
+}
+
+
+
+int Game::montecarlo(int player, int games) {
+    __uint128_t original_boards[2] = {this->board[0], this->board[1]};
+    __uint128_t moves[512];
+    int score = 0;
+    while (games --> 0) {
+        int turn = player;
+        while (!this->is_over()) {
+            int move_count = this->get_possible_moves(turn, moves);
+            int best = -10000000;
+            int best_move = 0;
+            for (int move = 0; move != move_count; ++move) {
+                int idx = move*2;
+                this->board[0] = moves[idx];
+                this->board[1] = moves[idx + 1];
+                int heur = this->heuristic(turn) + (rand()%16);
+                if (heur > best) {
+                    best = heur;
+                    best_move = idx;
+                }
+            }
+            this->board[0] = moves[best_move];
+            this->board[1] = moves[best_move + 1];
+            turn ^= 1;
+        }
+        if (this->has_won(player)) {
+            score++;
+        } else {
+            score--;
+        }
+
+        this->board[0] = original_boards[0];
+        this->board[1] = original_boards[1];
+    }
+    return score;
+}
+
+int Game::montecarlo_play(int player, int games) {
+    __uint128_t best_boards[2] = {0, 0};
+    __uint128_t moves[1024];
+    int best = -games-1;
+    int move_count = this->get_possible_moves(player, moves);
+
+    for (int move = 0; move != move_count; ++move) {
+        this->board[0] = moves[move*2];
+        this->board[1] = moves[move*2 + 1];
+        int score = -this->montecarlo(player^1, games);
+        if (score > best) {
+            best = score;
+            best_boards[0] = this->board[0];
+            best_boards[1] = this->board[1];
+        }
+    }
+    this->board[0] = best_boards[0];
+    this->board[1] = best_boards[1];
+    return best;
+}
+
+
+int Game::random_play(int player) {
+    __uint128_t moves[1024];
+    int move_count = this->get_possible_moves(player, moves);
+    int idx = rand()%move_count;
+    this->board[0] = moves[idx*2];
+    this->board[1] = moves[idx*2 + 1];
+    return 0;
+}
+
+
+int Game::negamax(int player, int depth, int alpha, int beta, bool play_best_move){
+    // This function does the same as get_possible_moves and more
+    // I know this is ugly, but it is faster to have this code duplicated as it allows for earlier termination
+    // i.e. when an alpha beta break happens, we do not need to calculate all other possible moves
     __uint128_t board = this->board[player];
     __uint128_t enemy = this->board[player^1];
     __uint128_t invalid = board | enemy | ~PLAYING_FIELD;
@@ -536,7 +739,7 @@ int Game::evaluate(int player, int depth, int alpha, int beta) {
     } else  {
         TranspositionData stub_result(player, depth, 0, 1, FLAG_EXACT, 0);
         this->trans_set(stub_result);
-        score = -this->generate_moves(player ^ 1, depth - 1, -beta, -alpha, 0);
+        score = -this->negamax(player ^ 1, depth - 1, -beta, -alpha, 0);
         if (this->trans_get(player, false).stub == 1) {
             TranspositionData clear_result(player, 0, 0, 0, 0, 0);
             this->trans_set(clear_result);

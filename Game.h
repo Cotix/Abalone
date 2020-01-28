@@ -67,7 +67,12 @@ public:
     __uint128_t get_neighbours(__uint128_t position, const int group_size, const __uint128_t group);
     __uint128_t get_groups(__uint128_t position, const int group_size, const int direction);
     __uint128_t make_groups(__uint128_t position, const int group_size, const int direction);
-    int generate_moves(int player, int depth, int alpha, int beta, bool play_best_move);
+    int negamax(int player, int depth, int alpha, int beta, bool play_best_move);
+    int negamax_use_movegenerator(int player, int depth, int alpha, int beta, bool play_best_move);
+    int get_possible_moves(int player, __uint128_t *move_boards);
+    int montecarlo(int player, int games);
+    int montecarlo_play(int player, int games);
+    int random_play(int player);
     __uint128_t get_sumitos(__uint128_t board, __uint128_t opponent, const int group_size, const int direction);
     int evaluate(int player, int depth, int alpha, int beta);
     unsigned int piece_count[4];
