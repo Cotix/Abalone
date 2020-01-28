@@ -15,15 +15,13 @@ void demo_play() {
         moves++;
         int score;
         if (player == 0) {
-            score = games[0].negamax_use_movegenerator(0, 7, -127, 127, 1);
+            score = games[0].negamax_use_movegenerator(0, 6, -127, 127, 1);
         } else {
-            score = games[1].negamax_use_movegenerator(1, 4, -127, 127, 1);
+            score = games[1].negamax_use_movegenerator(1, 6, -127, 127, 1);
         }
         std::cout << "Expected by: " << (player == 0 ? 'A' : 'B') << ": "
                   << score << std::endl;
 
-        std::cout << games[player].get_average_distance_to_middle(0) << std::endl;
-        std::cout << games[player].get_average_distance_to_middle(1) << std::endl;
         std::cout << games[player].to_string() << std::endl;
 
         games[player ^ 1].board[0] = games[player].board[0];
@@ -41,9 +39,9 @@ void demo_play() {
 
 int main() {
     demo_play();
-    Game game = Game(2, 1);
-    game.daisy();
-    std::cout << game.negamax_use_movegenerator(0, 8, -127, 127, 0) << std::endl;
-    std::cout << game.position_evaluated/1000000.0 << "M" << std::endl;
-    return 0;
+//    Game game = Game(2, 1);
+//    game.daisy();
+//    std::cout << game.negamax_use_movegenerator(0, 8, -127, 127, 0) << std::endl;
+//    std::cout << game.position_evaluated/1000000.0 << "M" << std::endl;
+//    return 0;
 }

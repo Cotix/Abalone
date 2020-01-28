@@ -42,9 +42,7 @@ const __uint128_t MSB = ONE<<127;
 // 2MB = 65521, 65537
 // 32768 per mb
 // There are two transposition tables
-// One that is meant to be accessed often, and should be smaller to prevent a lot of swapping
-// And one that is used for transpositions that took a lot of work and can be bigger (But not too big)
-// Somehow a huge transposition table actually decreases performance. This probably has to do with page swapping
+// One has a overwrite policy of always-overwrite, the otherone overwrites if the new position has more work done.
 uint64_t transposition_size_short = 33554393; //
 uint64_t transposition_size_long = 33554393; //
 uint64_t transposition_size = transposition_size_short+transposition_size_long;
@@ -747,8 +745,8 @@ int Game::evaluate(int player, int depth, int alpha, int beta) {
     // Interesting optimalisation: since point movement is pretty continous i.e. you can only win 1 piece per turn
     // We can stop searching if we do not have enough moves left to make up for a score deficiency
     // However, It seems broken-ish with the new heuristic
-    // int current_score = (this->get_score() * (1 - 2*player))*10;
-    //    if (current_score - ((depth)/2)*14 >= beta) return current_score - (depth/2);
+//    int current_score = this->experimental ? this->heuristic_experimental(player) : this->heuristic(player);;
+//    if (current_score - ((depth)/2)*14 >= beta) return current_score - (depth/2);
 
     TranspositionData data = this->trans_get(player, false);
     int orig_alpha = alpha;
