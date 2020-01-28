@@ -16,7 +16,7 @@
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
 #define SHIFT(X, Y)  ((Y) > 0 ? (X)<<(Y) : (X)>>(-Y))
 
-const int ROW_COUNT = 9;
+const int ROW_COUNT = 10;
 const int ROW_SIZE = 11;
 const int UP_LEFT = ROW_SIZE;
 const int UP_RIGHT = ROW_SIZE-1;
@@ -49,37 +49,39 @@ uint64_t transposition_size_short = 33554393; //
 uint64_t transposition_size_long = 33554393; //
 uint64_t transposition_size = transposition_size_short+transposition_size_long;
 const __uint128_t PLAYING_FIELD =
-        (((__uint128_t) 0b00000111110) << ROW_SIZE * 8)  +
-        (((__uint128_t) 0b00001111110) << ROW_SIZE * 7)  +
-        (((__uint128_t) 0b00011111110) << ROW_SIZE * 6)  +
-        (((__uint128_t) 0b00111111110) << ROW_SIZE * 5)  +
-        (((__uint128_t) 0b01111111110) << ROW_SIZE * 4)  +
-        (((__uint128_t) 0b01111111100) << ROW_SIZE * 3)  +
-        (((__uint128_t) 0b01111111000) << ROW_SIZE * 2)  +
-        (((__uint128_t) 0b01111110000) << ROW_SIZE * 1)  +
-        (((__uint128_t) 0b01111100000) << ROW_SIZE * 0);
+        (((__uint128_t) 0b00000111110) << ROW_SIZE * 9)  +
+        (((__uint128_t) 0b00001111110) << ROW_SIZE * 8)  +
+        (((__uint128_t) 0b00011111110) << ROW_SIZE * 7)  +
+        (((__uint128_t) 0b00111111110) << ROW_SIZE * 6)  +
+        (((__uint128_t) 0b01111111110) << ROW_SIZE * 5)  +
+        (((__uint128_t) 0b01111111100) << ROW_SIZE * 4)  +
+        (((__uint128_t) 0b01111111000) << ROW_SIZE * 3)  +
+        (((__uint128_t) 0b01111110000) << ROW_SIZE * 2)  +
+        (((__uint128_t) 0b01111100000) << ROW_SIZE * 1);
 
 const __uint128_t HOTSPOTS =
+        (((__uint128_t) 0b00000000000) << ROW_SIZE * 9)  +
         (((__uint128_t) 0b00000000000) << ROW_SIZE * 8)  +
-        (((__uint128_t) 0b00000000000) << ROW_SIZE * 7)  +
-        (((__uint128_t) 0b00000111000) << ROW_SIZE * 6)  +
-        (((__uint128_t) 0b00001111000) << ROW_SIZE * 5)  +
-        (((__uint128_t) 0b00011111000) << ROW_SIZE * 4)  +
-        (((__uint128_t) 0b00011110000) << ROW_SIZE * 3)  +
-        (((__uint128_t) 0b00011100000) << ROW_SIZE * 2)  +
-        (((__uint128_t) 0b00000000000) << ROW_SIZE * 1)  +
-        (((__uint128_t) 0b00000000000) << ROW_SIZE * 0);
+        (((__uint128_t) 0b00000111000) << ROW_SIZE * 7)  +
+        (((__uint128_t) 0b00001111000) << ROW_SIZE * 6)  +
+        (((__uint128_t) 0b00011111000) << ROW_SIZE * 5)  +
+        (((__uint128_t) 0b00011110000) << ROW_SIZE * 4)  +
+        (((__uint128_t) 0b00011100000) << ROW_SIZE * 3)  +
+        (((__uint128_t) 0b00000000000) << ROW_SIZE * 2)  +
+        (((__uint128_t) 0b00000000000) << ROW_SIZE * 1);
 
 const __uint128_t OUTER_RING =
-        (((__uint128_t) 0b00000111110) << ROW_SIZE * 8)  +
-        (((__uint128_t) 0b00001000010) << ROW_SIZE * 7)  +
-        (((__uint128_t) 0b00010000010) << ROW_SIZE * 6)  +
-        (((__uint128_t) 0b00100000010) << ROW_SIZE * 5)  +
-        (((__uint128_t) 0b01000000010) << ROW_SIZE * 4)  +
-        (((__uint128_t) 0b01000000100) << ROW_SIZE * 3)  +
-        (((__uint128_t) 0b01000001000) << ROW_SIZE * 2)  +
-        (((__uint128_t) 0b01000010000) << ROW_SIZE * 1)  +
-        (((__uint128_t) 0b01000100000) << ROW_SIZE * 0);
+        (((__uint128_t) 0b00000111110) << ROW_SIZE * 9)  +
+        (((__uint128_t) 0b00001000010) << ROW_SIZE * 8)  +
+        (((__uint128_t) 0b00010000010) << ROW_SIZE * 7)  +
+        (((__uint128_t) 0b00100000010) << ROW_SIZE * 6)  +
+        (((__uint128_t) 0b01000000010) << ROW_SIZE * 5)  +
+        (((__uint128_t) 0b01000000100) << ROW_SIZE * 4)  +
+        (((__uint128_t) 0b01000001000) << ROW_SIZE * 3)  +
+        (((__uint128_t) 0b01000010000) << ROW_SIZE * 2)  +
+        (((__uint128_t) 0b01000100000) << ROW_SIZE * 1);
+
+const __uint128_t MIDDLE = (((__uint128_t) 0b00000100000) << ROW_SIZE * 5);
 
 Game::~Game() {
     free(transpositions);
@@ -96,13 +98,13 @@ Game::Game(unsigned int players, bool experimental) {
     if (players == 2) {
         this->board[0] =
                 0b01111100000 |
-                (((__uint128_t) 0b01111110000) << ROW_SIZE * 1) |
-                (((__uint128_t) 0b00011100000) << ROW_SIZE * 2);
+                (((__uint128_t) 0b01111110000) << ROW_SIZE * 2) |
+                (((__uint128_t) 0b00011100000) << ROW_SIZE * 3);
 
         this->board[1] =
-                (((__uint128_t) 0b00000111110) << ROW_SIZE * 8) |
-                (((__uint128_t) 0b00001111110) << ROW_SIZE * 7) |
-                (((__uint128_t) 0b00000111000) << ROW_SIZE * 6);
+                (((__uint128_t) 0b00000111110) << ROW_SIZE * 9) |
+                (((__uint128_t) 0b00001111110) << ROW_SIZE * 8) |
+                (((__uint128_t) 0b00000111000) << ROW_SIZE * 7);
         this->piece_count[0] = 14;
         this->piece_count[1] = 14;
     }
@@ -110,20 +112,20 @@ Game::Game(unsigned int players, bool experimental) {
 
 void Game::daisy() {
     this->board[0] =
-            (((__uint128_t) 0b00001100000) << ROW_SIZE * 0) |
-            (((__uint128_t) 0b00001110000) << ROW_SIZE * 1) |
-            (((__uint128_t) 0b00000110000) << ROW_SIZE * 2) |
-            (((__uint128_t) 0b00001100000) << ROW_SIZE * 6) |
-            (((__uint128_t) 0b00001110000) << ROW_SIZE * 7) |
-            (((__uint128_t) 0b00000110000) << ROW_SIZE * 8);
+            (((__uint128_t) 0b00001100000) << ROW_SIZE * 1) |
+            (((__uint128_t) 0b00001110000) << ROW_SIZE * 2) |
+            (((__uint128_t) 0b00000110000) << ROW_SIZE * 3) |
+            (((__uint128_t) 0b00001100000) << ROW_SIZE * 7) |
+            (((__uint128_t) 0b00001110000) << ROW_SIZE * 8) |
+            (((__uint128_t) 0b00000110000) << ROW_SIZE * 9);
 
     this->board[1] =
-            (((__uint128_t) 0b01100000000) << ROW_SIZE * 0) |
-            (((__uint128_t) 0b01110000000) << ROW_SIZE * 1) |
-            (((__uint128_t) 0b00110000000) << ROW_SIZE * 2) |
-            (((__uint128_t) 0b00000001100) << ROW_SIZE * 6) |
-            (((__uint128_t) 0b00000001110) << ROW_SIZE * 7) |
-            (((__uint128_t) 0b00000000110) << ROW_SIZE * 8);
+            (((__uint128_t) 0b01100000000) << ROW_SIZE * 1) |
+            (((__uint128_t) 0b01110000000) << ROW_SIZE * 2) |
+            (((__uint128_t) 0b00110000000) << ROW_SIZE * 3) |
+            (((__uint128_t) 0b00000001100) << ROW_SIZE * 7) |
+            (((__uint128_t) 0b00000001110) << ROW_SIZE * 8) |
+            (((__uint128_t) 0b00000000110) << ROW_SIZE * 9);
     assert((this->board[0] & this->board[1]) == 0);
     assert(((this->board[0] | this->board[1]) & ~PLAYING_FIELD) == 0);
     this->piece_count[0] = 14;
@@ -158,15 +160,15 @@ std::string Game::_print_bits(unsigned int from, unsigned int count) {
 
 std::string Game::to_string() {
     std::string result = std::string();
-    result += "    "; result += this->_print_bits(ROW_SIZE*8+5, 5); result += "\n";
-    result += "   "; result += this->_print_bits(ROW_SIZE*7+6, 6); result += "\n";
-    result += "  "; result += this->_print_bits(ROW_SIZE*6+7, 7); result += "\n";
-    result += " "; result += this->_print_bits(ROW_SIZE*5+8, 8); result += "\n";
-    result += ""; result += this->_print_bits(ROW_SIZE*4+9, 9); result += "\n";
-    result += " "; result += this->_print_bits(ROW_SIZE*3+9, 8); result += "\n";
-    result += "  "; result += this->_print_bits(ROW_SIZE*2+9, 7); result += "\n";
-    result += "   "; result += this->_print_bits(ROW_SIZE*1+9, 6); result += "\n";
-    result += "    "; result += this->_print_bits(ROW_SIZE*0+9, 5); result += "\n";
+    result += "    "; result += this->_print_bits(ROW_SIZE*9+5, 5); result += "\n";
+    result += "   "; result += this->_print_bits(ROW_SIZE*8+6, 6); result += "\n";
+    result += "  "; result += this->_print_bits(ROW_SIZE*7+7, 7); result += "\n";
+    result += " "; result += this->_print_bits(ROW_SIZE*6+8, 8); result += "\n";
+    result += ""; result += this->_print_bits(ROW_SIZE*5+9, 9); result += "\n";
+    result += " "; result += this->_print_bits(ROW_SIZE*4+9, 8); result += "\n";
+    result += "  "; result += this->_print_bits(ROW_SIZE*3+9, 7); result += "\n";
+    result += "   "; result += this->_print_bits(ROW_SIZE*2+9, 6); result += "\n";
+    result += "    "; result += this->_print_bits(ROW_SIZE*1+9, 5); result += "\n";
     return result;
 }
 inline __uint8_t reverse_byte(__uint8_t b) {
@@ -175,32 +177,32 @@ inline __uint8_t reverse_byte(__uint8_t b) {
 
 inline __uint128_t flip_board(__uint128_t board) {
     unsigned int rows[9] = {0,0,0,0,0,0,0,0,0};
-    rows[0] = reverse_byte((board>>(ROW_SIZE * 0 + 5)) & 0xFF) << 2;
-    rows[1] = reverse_byte((board>>(ROW_SIZE * 1 + 4)) & 0xFF) << 2;
-    rows[2] = reverse_byte((board>>(ROW_SIZE * 2 + 3)) & 0xFF) << 2;
-    rows[3] = reverse_byte((board>>(ROW_SIZE * 3 + 2)) & 0xFF) << 2;
+    rows[0] = reverse_byte((board>>(ROW_SIZE * 1 + 5)) & 0xFF) << 2;
+    rows[1] = reverse_byte((board>>(ROW_SIZE * 2 + 4)) & 0xFF) << 2;
+    rows[2] = reverse_byte((board>>(ROW_SIZE * 3 + 3)) & 0xFF) << 2;
+    rows[3] = reverse_byte((board>>(ROW_SIZE * 4 + 2)) & 0xFF) << 2;
 
 
-    unsigned int row = (board>>(ROW_SIZE * 4 + 1));
+    unsigned int row = (board>>(ROW_SIZE * 5 + 1));
     unsigned int first_bit = row&0x100;
     row &= 0xFF;
     rows[4] = ((reverse_byte(row) << 1) | (first_bit >> 8)) << 1;
 
 
-    rows[5] = reverse_byte((board>>(ROW_SIZE * 5 + 1)) & 0xFF) << 1;
-    rows[6] = reverse_byte((board>>(ROW_SIZE * 6 + 1)) & 0xFF);
-    rows[7] = reverse_byte((board>>(ROW_SIZE * 7 + 1)) & 0xFF) >> 1;
-    rows[8] = reverse_byte((board>>(ROW_SIZE * 8 + 1)) & 0xFF) >> 2;
+    rows[5] = reverse_byte((board>>(ROW_SIZE * 6 + 1)) & 0xFF) << 1;
+    rows[6] = reverse_byte((board>>(ROW_SIZE * 7 + 1)) & 0xFF);
+    rows[7] = reverse_byte((board>>(ROW_SIZE * 8 + 1)) & 0xFF) >> 1;
+    rows[8] = reverse_byte((board>>(ROW_SIZE * 9 + 1)) & 0xFF) >> 2;
 
-    return (((__uint128_t) rows[0]) << ROW_SIZE*0) |
-           (((__uint128_t) rows[1]) << ROW_SIZE*1) |
-           (((__uint128_t) rows[2]) << ROW_SIZE*2) |
-           (((__uint128_t) rows[3]) << ROW_SIZE*3) |
-           (((__uint128_t) rows[4]) << ROW_SIZE*4) |
-           (((__uint128_t) rows[5]) << ROW_SIZE*5) |
-           (((__uint128_t) rows[6]) << ROW_SIZE*6) |
-           (((__uint128_t) rows[7]) << ROW_SIZE*7) |
-           (((__uint128_t) rows[8]) << ROW_SIZE*8);
+    return (((__uint128_t) rows[0]) << ROW_SIZE*1) |
+           (((__uint128_t) rows[1]) << ROW_SIZE*2) |
+           (((__uint128_t) rows[2]) << ROW_SIZE*3) |
+           (((__uint128_t) rows[3]) << ROW_SIZE*4) |
+           (((__uint128_t) rows[4]) << ROW_SIZE*5) |
+           (((__uint128_t) rows[5]) << ROW_SIZE*6) |
+           (((__uint128_t) rows[6]) << ROW_SIZE*7) |
+           (((__uint128_t) rows[7]) << ROW_SIZE*8) |
+           (((__uint128_t) rows[8]) << ROW_SIZE*9);
 };
 
 void Game::transform() {
@@ -248,15 +250,15 @@ inline __uint128_t Game::get_sumitos(__uint128_t board, __uint128_t opponent, co
     if (group_size == 3) {
         result = SHIFT(result, direction);
     }
-    result = (result & SHIFT(~(board|opponent)&~PLAYING_FIELD, -direction));
+    result = (result & (SHIFT((~(board|opponent)), -direction) | ~PLAYING_FIELD));
     return result;
 }
 
 inline TranspositionData Game::trans_get_data(uint64_t idx, int player) {
     __uint128_t b1 = transpositions[idx];
     __uint128_t b2 = transpositions[idx + 1];
-    int d = (transpositions[idx]>>(128ul-32ul));
-    TranspositionData data = *((TranspositionData*) &d);
+
+    TranspositionData data = *((TranspositionData*) &(transpositions[idx]));
     if (likely((b1&PLAYING_FIELD) == (this->board[0]&PLAYING_FIELD) &&
                (b2&PLAYING_FIELD) == (this->board[1]&PLAYING_FIELD) &&
                data.player == player)) {
@@ -317,13 +319,14 @@ inline void Game::trans_set(TranspositionData data) {
 
     transpositions[idx_short] = this->board[0]&PLAYING_FIELD;
     transpositions[idx_short+1] = this->board[1]&PLAYING_FIELD;
-    transpositions[idx_short] |= (*((__uint128_t*) &data)) << (128ul-32ul);
+    transpositions[idx_short] |= (*((__uint128_t*) &data));
+    assert(((*((__uint128_t*) &data))&PLAYING_FIELD) == 0);
 
     TranspositionData existing = this->trans_get_data(idx_long, data.player);
     if (existing.work < data.work) {
         transpositions[idx_long] = this->board[0] & PLAYING_FIELD;
         transpositions[idx_long + 1] = this->board[1] & PLAYING_FIELD;
-        transpositions[idx_long] |= (*((__uint128_t *) &data)) << (128ul - 32ul);
+        transpositions[idx_long] |= (*((__uint128_t *) &data));
     }
 }
 
@@ -428,7 +431,7 @@ int Game::negamax_use_movegenerator(int player, int depth, int alpha, int beta, 
         sorted_moves[i] = i;
         this->board[0] = moves[i*2];
         this->board[1] = moves[i*2 + 1];
-        scores[i] = this->heuristic(player);
+        scores[i] = this->experimental ? this->heuristic_experimental(player) : this->heuristic(player);
     }
     std::sort(sorted_moves, sorted_moves + move_count, [scores](int const (&a), int const (&b)) -> bool {
         return scores[a] > scores[b];
@@ -525,6 +528,29 @@ int Game::random_play(int player) {
     this->board[0] = moves[idx*2];
     this->board[1] = moves[idx*2 + 1];
     return 0;
+}
+
+
+__uint128_t Game::get_middle(__uint128_t board){
+    __uint128_t boards[this->piece_count[0]*2];
+    int piece_count = 0;
+    // Split board into different pieces
+    while(board != 0) {
+        __uint128_t piece = (board & ~(board - 1));
+        boards[piece_count++] = piece;
+        board ^= piece;
+    }
+    while(true) {
+        __uint128_t matches = PLAYING_FIELD;
+        for (int b = 0; b != piece_count; ++b) {
+            boards[b] = get_neighbours(boards[b], 1, boards[b]) & PLAYING_FIELD;
+            matches &= boards[b];
+        }
+        if (matches != 0) {
+            return (matches & ~(matches-1));
+        }
+    }
+
 }
 
 
@@ -665,6 +691,29 @@ int Game::heuristic(int player) {
     return score;
 }
 
+int Game::get_average_distance_to_middle(int player) {
+    int res = 0;
+    __uint128_t middle = this->get_middle(this->get_middle(this->board[player]) | MIDDLE);
+    __uint128_t board = this->board[player];
+    while(board != 0) {
+        __uint128_t piece = (board & ~(board - 1));
+        board ^= piece;
+        while ((piece&middle) == 0) {
+            piece = get_neighbours(piece, 1, piece);
+            res++;
+        }
+    }
+    return res;
+}
+
+int Game::heuristic_experimental(int player) {
+    int score = this->get_score() * (1 - 2*player)*10;
+    score -= get_average_distance_to_middle(player) - get_average_distance_to_middle(player^1);
+    assert(score <= 127);
+    assert(score >= -127);
+    return score;
+}
+
 int Game::has_won(int player) {
     return this->piece_count[player^1] - count_bits(this->board[player^1]) >= 6;
 }
@@ -694,8 +743,12 @@ int log2(uint64_t v) {
 
 int Game::evaluate(int player, int depth, int alpha, int beta) {
     this->position_evaluated++;
-    int current_score = (this->get_score() * (1 - 2*player))*10;
-    if (current_score - ((depth)/2)*11 >= beta) return current_score - (depth/2);
+
+    // Interesting optimalisation: since point movement is pretty continous i.e. you can only win 1 piece per turn
+    // We can stop searching if we do not have enough moves left to make up for a score deficiency
+    // However, It seems broken-ish with the new heuristic
+    // int current_score = (this->get_score() * (1 - 2*player))*10;
+    //    if (current_score - ((depth)/2)*14 >= beta) return current_score - (depth/2);
 
     TranspositionData data = this->trans_get(player, false);
     int orig_alpha = alpha;
@@ -713,12 +766,13 @@ int Game::evaluate(int player, int depth, int alpha, int beta) {
         }
     }
 
-    if (this->experimental) {
-        int temp_score = this->heuristic(player);
-        if (temp_score > beta) {
-            return temp_score;
-        }
-    }
+    // Interesting optimalisation that completely destroys the perfect nature of minimax, but greatly improves speed
+//    if (this->experimental) {
+//        int temp_score = this->heuristic(player);
+//        if (temp_score > beta) {
+//            return temp_score;
+//        }
+//    }
 
     if (data.depth > depth && data.stub == 1) {
         // Draw!
@@ -735,7 +789,7 @@ int Game::evaluate(int player, int depth, int alpha, int beta) {
         return 100+depth;
     } else if (depth == 1) {
 //        std::cout << this->to_string() << std::endl;
-        score = this->heuristic(player);
+        score = this->experimental ? this->heuristic_experimental(player) : this->heuristic(player);
     } else  {
         TranspositionData stub_result(player, depth, 0, 1, FLAG_EXACT, 0);
         this->trans_set(stub_result);
