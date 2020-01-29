@@ -4,11 +4,7 @@ This repo contains a work in progress computer player for Abalone. In my very na
 
 
 ## Current state
-Right now performance is already up to par, or better then ABA-PRO(which is one of the fastest to my knowledge, please let me know if you know of any other decent computer player).
-
-On the dutch daisy opening setting the computer player takes about a minute to solve for 12ply with 2x1gb allocated for the transposition tables.
-
-Functionality to actually use this computer player (i.e. have a functioning interface, some kind of decent player api) is not an immediate priority. Although ofcourse I do welcome pullrequests.
+Right now work is spend on optimizing the tree search and improving the heuristic. Functionality to actually use this computer player (i.e. have a functioning interface, some kind of decent player api) is not an immediate priority. As such comparing performance is impossible for now. Although ofcourse I do welcome pullrequests.
 
 
 ## Installation
