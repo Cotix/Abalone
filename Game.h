@@ -13,8 +13,8 @@
  *         x x x x x x
  *          x x x x x
  *
- *
- *     . . . .  .x x x x x .
+ *     . . . . . . . . . . .
+ *     . . . . . x x x x x .
  *     . . . . x x x x x x .
  *     . . . x x x x x x x .
  *     . . x x x x x x x x .
@@ -23,6 +23,7 @@
  *     . x x x x x x x . . .
  *     . x x x x x x . . . .
  *     . x x x x x . . . . .
+ *     . . . . . . . . . . .
  *    10 9 8 7 6 5 4 3 2 1 0
  */
 
@@ -36,17 +37,18 @@
 
 #include <cstdint>
 #include <string>
-
+#pragma pack(1)
 struct TranspositionData {
-    unsigned int padding: 6;
-    unsigned int player: 1;
-    unsigned int stub: 1;
     unsigned int depth: 8;
     char score: 8;
+    __uint128_t padding: 101;
+    unsigned int player: 1;
+    unsigned int stub: 1;
     unsigned int flag: 2;
     unsigned int work: 5;
 
     TranspositionData(int player, int depth, char score, int stub, int flag, int work) {
+        this->padding = 0;
         this->player = player;
         this->depth = depth;
         this->score = score;
@@ -106,6 +108,12 @@ public:
     int has_won(int player);
 
     int is_over();
+
+    __uint128_t get_middle(__uint128_t board);
+
+    int get_average_distance_to_middle(int player);
+
+    int heuristic_experimental(int player);
 };
 
 
