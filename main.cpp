@@ -15,9 +15,9 @@ void demo_play() {
         moves++;
         int score;
         if (player == 0) {
-            score = games[0].iterative_search(0, 1000, 1);
+            score = games[0].iterative_search(0, 5000, 1);
         } else {
-            score = games[1].iterative_search(1, 1000, 1);
+            score = games[1].iterative_search(1, 5000, 1);
         }
         std::cout << "Expected by: " << (player == 0 ? 'A' : 'B') << ": "
                   << score << std::endl;

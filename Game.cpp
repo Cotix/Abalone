@@ -649,12 +649,13 @@ int Game::evaluate(int player, int depth, int alpha, int beta, high_resolution_c
     }
     this->position_evaluated++;
 
-    // Interesting optimalisation: since point movement is pretty continous i.e. you can only win 1 piece per turn
-    // We can stop searching if we do not have enough moves left to make up for a score deficiency
-    // However, It seems broken-ish with the new heuristic
-//    int current_score = this->experimental ? this->heuristic_experimental(player) : this->heuristic(player);;
-//    if (current_score - ((depth)/2)*14 >= beta) return current_score - (depth/2);
-
+    // Experimental optimalisation: since point movement is pretty continous i.e. you can only win 1 piece per turn
+    // Once our current score exceeds beta by so much that it will still be higher at depth 0
+    // We can just alpha beta break right here instead
+    if (this->experimental) {
+        int current_score = this->heuristic(player);
+        if (current_score - ((depth) / 2) * 14 >= beta) return current_score - (depth / 2);
+    }
     TranspositionData data = this->trans_get(player, false);
     int orig_alpha = alpha;
     int orig_beta = beta;
@@ -671,13 +672,6 @@ int Game::evaluate(int player, int depth, int alpha, int beta, high_resolution_c
         }
     }
 
-    // Interesting optimalisation that completely destroys the perfect nature of minimax, but greatly improves speed
-//    if (this->experimental) {
-//        int temp_score = this->heuristic(player);
-//        if (temp_score > beta) {
-//            return temp_score;
-//        }
-//    }
 
     if (data.depth > depth && data.stub == 1) {
         // Draw!
