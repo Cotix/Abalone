@@ -17,6 +17,8 @@
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
 #define SHIFT(X, Y)  ((Y) > 0 ? (X)<<(Y) : (X)>>(-Y))
 
+using namespace std::chrono;
+
 const int ROW_COUNT = 10;
 const int ROW_SIZE = 11;
 const int UP_LEFT = ROW_SIZE;
@@ -411,7 +413,7 @@ int Game::get_possible_moves(int player, __uint128_t *move_boards){
     return move_pointer;
 }
 
-int Game::negamax(int player, int depth, int alpha, int beta, bool play_best_move) {
+int Game::negamax(int player, int depth, int alpha, int beta, bool play_best_move, high_resolution_clock::time_point start, int time_limit) {
     __uint128_t board = this->board[player];
     __uint128_t enemy = this->board[player^1];
     __uint128_t invalid = board | enemy | ~PLAYING_FIELD;
@@ -443,7 +445,7 @@ int Game::negamax(int player, int depth, int alpha, int beta, bool play_best_mov
         int idx = sorted_moves[i]*2;
         this->board[0] = moves[idx];
         this->board[1] = moves[idx+1];
-        int score = this->evaluate(player, depth, alpha, beta);
+        int score = this->evaluate(player, depth, alpha, beta, start, time_limit);
         if (score > best) {
             best = score;
             best_boards[0] = this->board[0];
@@ -558,7 +560,8 @@ __uint128_t Game::get_middle(__uint128_t board){
 
 
 int Game::iterative_search(int player, int time_limit, bool play_best_move) {
-    using namespace std::chrono;
+    __uint128_t original_boards[2] = {this->board[0], this->board[1]};
+    __uint128_t last_boards[2];
     high_resolution_clock::time_point start = high_resolution_clock::now();
     int res = -127;
     for (int depth = 1; depth < 27; depth++) {
@@ -567,8 +570,21 @@ int Game::iterative_search(int player, int time_limit, bool play_best_move) {
         if (time_span >= time_limit) {
             return res;
         }
-        std::cout << depth << std::endl;
-        res = this->negamax(player, depth, -127, 127, 0);
+        try {
+            this->board[0] = original_boards[0];
+            this->board[1] = original_boards[1];
+            res = this->negamax(player, depth, -127, 127, play_best_move, start, time_limit);
+            last_boards[0] = this->board[0];
+            last_boards[1] = this->board[1];
+        } catch (int e) {
+            // reset boards
+            this->board[0] = last_boards[0];
+            this->board[1] = last_boards[1];
+            if (e == 1) {
+                // Timeout
+                break;
+            }
+        }
     }
     return res;
 }
@@ -631,7 +647,14 @@ int log2(uint64_t v) {
     return MultiplyDeBruijnBitPosition[(uint32_t)(v * 0x07C4ACDDU) >> 27];
 }
 
-int Game::evaluate(int player, int depth, int alpha, int beta) {
+int Game::evaluate(int player, int depth, int alpha, int beta, high_resolution_clock::time_point start, int time_limit) {
+    if (depth >= 4) {
+        high_resolution_clock::time_point now = high_resolution_clock::now();
+        int time_span = duration_cast<milliseconds>(now - start).count();
+        if (time_span >= time_limit) {
+            throw 1;
+        }
+    }
     this->position_evaluated++;
 
     // Interesting optimalisation: since point movement is pretty continous i.e. you can only win 1 piece per turn
@@ -683,7 +706,7 @@ int Game::evaluate(int player, int depth, int alpha, int beta) {
     } else  {
         TranspositionData stub_result(player, depth, 0, 1, FLAG_EXACT, 0);
         this->trans_set(stub_result);
-        score = -this->negamax(player ^ 1, depth - 1, -beta, -alpha, 0);
+        score = -this->negamax(player ^ 1, depth - 1, -beta, -alpha, 0, start, time_limit);
         if (this->trans_get(player, false).stub == 1) {
             TranspositionData clear_result(player, 0, 0, 0, 0, 0);
             this->trans_set(clear_result);

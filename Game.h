@@ -37,7 +37,12 @@
 
 #include <cstdint>
 #include <string>
+#include <chrono>
+
 #pragma pack(1)
+
+using namespace std::chrono;
+
 struct TranspositionData {
     unsigned int depth: 8;
     char score: 8;
@@ -69,14 +74,14 @@ public:
     __uint128_t get_neighbours(__uint128_t position, const int group_size, const __uint128_t group);
     __uint128_t get_groups(__uint128_t position, const int group_size, const int direction);
     __uint128_t make_groups(__uint128_t position, const int group_size, const int direction);
-    int negamax(int player, int depth, int alpha, int beta, bool play_best_move);
+    int negamax(int player, int depth, int alpha, int beta, bool play_best_move, high_resolution_clock::time_point start, int time_limit);
     int get_possible_moves(int player, __uint128_t *move_boards);
     int montecarlo(int player, int games);
     int iterative_search(int player, int time_limit, bool play_best_move);
     int montecarlo_play(int player, int games);
     int random_play(int player);
     __uint128_t get_sumitos(__uint128_t board, __uint128_t opponent, const int group_size, const int direction);
-    int evaluate(int player, int depth, int alpha, int beta);
+    int evaluate(int player, int depth, int alpha, int beta, high_resolution_clock::time_point start, int time_limit);
     unsigned int piece_count[4];
 
     Game(unsigned int players, bool experimental);
