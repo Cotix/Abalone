@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <cstring>
 #include "Game.h"
+#include <chrono>
 #include <algorithm>
 #include <array>
 
@@ -427,13 +428,17 @@ int Game::negamax_use_movegenerator(int player, int depth, int alpha, int beta, 
     assert(move_count < 512);
     for (int i = 0; i != move_count; ++i) {
         sorted_moves[i] = i;
-        this->board[0] = moves[i*2];
-        this->board[1] = moves[i*2 + 1];
-        scores[i] = this->experimental ? this->heuristic_experimental(player) : this->heuristic(player);
+        if (depth >= 3) {
+            this->board[0] = moves[i * 2];
+            this->board[1] = moves[i * 2 + 1];
+            scores[i] = this->experimental ? this->heuristic_experimental(player) : this->heuristic(player);
+        }
     }
-    std::sort(sorted_moves, sorted_moves + move_count, [scores](int const (&a), int const (&b)) -> bool {
-        return scores[a] > scores[b];
-    } );
+    if (depth >= 3) {
+        std::sort(sorted_moves, sorted_moves + move_count, [scores](int const (&a), int const (&b)) -> bool {
+            return scores[a] > scores[b];
+        });
+    }
     for (int i = 0; i != move_count; ++i) {
         int idx = sorted_moves[i]*2;
         this->board[0] = moves[idx];
@@ -551,6 +556,22 @@ __uint128_t Game::get_middle(__uint128_t board){
 
 }
 
+
+int Game::iterative_search(int player, int time_limit, bool play_best_move) {
+    using namespace std::chrono;
+    high_resolution_clock::time_point start = high_resolution_clock::now();
+    int res = -127;
+    for (int depth = 1; depth < 27; depth++) {
+        high_resolution_clock::time_point now = high_resolution_clock::now();
+        int time_span = duration_cast<milliseconds>(now - start).count();
+        if (time_span >= time_limit) {
+            return res;
+        }
+        std::cout << depth << std::endl;
+        res = this->negamax_use_movegenerator(player, depth, -127, 127, 0);
+    }
+    return res;
+}
 
 int Game::negamax(int player, int depth, int alpha, int beta, bool play_best_move){
     // This function does the same as get_possible_moves and more

@@ -73,6 +73,7 @@ public:
     int negamax_use_movegenerator(int player, int depth, int alpha, int beta, bool play_best_move);
     int get_possible_moves(int player, __uint128_t *move_boards);
     int montecarlo(int player, int games);
+    int iterative_search(int player, int time_limit, bool play_best_move);
     int montecarlo_play(int player, int games);
     int random_play(int player);
     __uint128_t get_sumitos(__uint128_t board, __uint128_t opponent, const int group_size, const int direction);
