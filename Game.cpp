@@ -411,7 +411,7 @@ int Game::get_possible_moves(int player, __uint128_t *move_boards){
     return move_pointer;
 }
 
-int Game::negamax_use_movegenerator(int player, int depth, int alpha, int beta, bool play_best_move) {
+int Game::negamax(int player, int depth, int alpha, int beta, bool play_best_move) {
     __uint128_t board = this->board[player];
     __uint128_t enemy = this->board[player^1];
     __uint128_t invalid = board | enemy | ~PLAYING_FIELD;
@@ -568,140 +568,11 @@ int Game::iterative_search(int player, int time_limit, bool play_best_move) {
             return res;
         }
         std::cout << depth << std::endl;
-        res = this->negamax_use_movegenerator(player, depth, -127, 127, 0);
+        res = this->negamax(player, depth, -127, 127, 0);
     }
     return res;
 }
 
-int Game::negamax(int player, int depth, int alpha, int beta, bool play_best_move){
-    // This function does the same as get_possible_moves and more
-    // I know this is ugly, but it is faster to have this code duplicated as it allows for earlier termination
-    // i.e. when an alpha beta break happens, we do not need to calculate all other possible moves
-    __uint128_t board = this->board[player];
-    __uint128_t enemy = this->board[player^1];
-    __uint128_t invalid = board | enemy | ~PLAYING_FIELD;
-    __uint128_t valid = ~invalid;
-    __uint128_t best_boards[2] = {0,0};
-    int tmp = 0;
-
-    int best = -127;
-    // sumitos
-    for (int group_size = 3; group_size >= 2; --group_size) {
-        const int* direction = DIRECTIONS;
-        for (; direction != &DIRECTIONS[DIRECTION_COUNT]; ++direction) {
-            __uint128_t moves = this->get_sumitos(board, enemy, group_size, *direction);
-
-            while (moves != 0) {
-                __uint128_t move = (moves & ~(moves - 1));
-                __uint128_t mask = this->make_groups(move, group_size*2 - 1, -*direction);
-                __uint128_t my_source = board & mask;
-                __uint128_t my_target = SHIFT(my_source, *direction);
-                __uint128_t op_source = enemy & mask;
-                __uint128_t op_target = SHIFT(op_source, *direction);
-                this->board[player] = (this->board[player] ^ my_source ^ my_target) & PLAYING_FIELD;
-                this->board[player^1] = (this->board[player^1] ^ op_source ^ op_target) & PLAYING_FIELD;
-                tmp = this->evaluate(player, depth, alpha, beta);
-                if (tmp > best || (tmp == best && (this->position_evaluated&0b111) == 0b111)) {
-                    best = tmp;
-                    best_boards[0] = this->board[0];best_boards[1] = this->board[1];
-                }
-                alpha = MAX(alpha, tmp);
-                this->board[player] = (this->board[player] ^ my_source ^ my_target) & PLAYING_FIELD;
-                this->board[player^1] = (this->board[player^1] ^ op_source ^ op_target) & PLAYING_FIELD;
-                if (alpha >= beta) {
-                    return alpha;
-                }
-                moves = moves ^ move;
-            }
-        }
-    }
-
-    // Inline moves
-    for (int group_size = 3; group_size >= 1; --group_size) {
-        __uint128_t moves_total = this->get_neighbours(board, group_size, board) & valid;
-        __uint128_t moves = moves_total & HOTSPOTS;
-        while (moves != 0) {
-            __uint128_t move = (moves & ~(moves - 1));
-            __uint128_t sources = this->get_neighbours(move, group_size, board|move) & board;
-            while (sources != 0) {
-                __uint128_t piece = (sources & ~(sources - 1));
-                this->board[player] ^= move ^ piece;
-                tmp = this->evaluate(player, depth, alpha, beta);
-                if (tmp > best || (tmp == best && (this->position_evaluated&0b111) == 0b111)) {
-                    best = tmp;
-                    best_boards[0] = this->board[0];best_boards[1] = this->board[1];
-                }
-                alpha = MAX(alpha, tmp);
-                this->board[player] ^= move ^ piece;
-                if (alpha >= beta) {
-                    return alpha;
-                }
-                sources = sources ^ piece;
-            }
-            moves = moves ^ move;
-        }
-        moves = moves_total & ~HOTSPOTS;
-        while (moves != 0) {
-            __uint128_t move = (moves & ~(moves - 1));
-            __uint128_t sources = this->get_neighbours(move, group_size, board|move) & board;
-            while (sources != 0) {
-                __uint128_t piece = (sources & ~(sources - 1));
-                this->board[player] ^= move ^ piece;
-                tmp = this->evaluate(player, depth, alpha, beta);
-                if (tmp > best || (tmp == best && (this->position_evaluated&0b111) == 0b111)) {
-                    best = tmp;
-                    best_boards[0] = this->board[0];best_boards[1] = this->board[1];
-                }
-                alpha = MAX(alpha, tmp);
-                this->board[player] ^= move ^ piece;
-                if (alpha >= beta) {
-                    return alpha;
-                }
-                sources = sources ^ piece;
-            }
-            moves = moves ^ move;
-        }
-    }
-
-
-    // Sideway moves
-    for (int group_size = 3; group_size >= 2; --group_size) {
-        const int* direction = DIRECTIONS;
-        const int* tangent = TANGENT_DIRECTIONS;
-        for (; direction != &DIRECTIONS[DIRECTION_COUNT]; ++direction) {
-            __uint128_t neighbours = (SHIFT(board, *direction) & valid);
-            while(*tangent != 0) {
-                __uint128_t moves = this->get_groups(neighbours, group_size, *tangent);
-
-                while (moves != 0) {
-                    __uint128_t move = (moves & ~(moves - 1));
-                    __uint128_t targets = this->make_groups(move, group_size, -*tangent);
-                    __uint128_t sources = SHIFT(targets, -*direction);
-                    this->board[player] ^= targets ^ sources;
-                    tmp = this->evaluate(player, depth, alpha, beta);
-                    if (tmp > best || (tmp == best && (this->position_evaluated&0b111) == 0b111)) {
-                        best = tmp;
-                        best_boards[0] = this->board[0];best_boards[1] = this->board[1];
-                    }
-                    alpha = MAX(alpha, tmp);
-                    this->board[player] ^= targets ^ sources;
-                    if (alpha >= beta) {
-                        return alpha;
-                    }
-                    moves = moves ^ move;
-                }
-                tangent++;
-            }
-            tangent++;
-        }
-    }
-
-    if (play_best_move){
-        this->board[0] = best_boards[0];
-        this->board[1] = best_boards[1];
-    }
-    return best;
-}
 
 int Game::heuristic(int player) {
     int score = this->get_score() * (1 - 2*player)*10;

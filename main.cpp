@@ -15,9 +15,9 @@ void demo_play() {
         moves++;
         int score;
         if (player == 0) {
-            score = games[0].negamax_use_movegenerator(0, 6, -127, 127, 1);
+            score = games[0].negamax(0, 6, -127, 127, 1);
         } else {
-            score = games[1].negamax_use_movegenerator(1, 6, -127, 127, 1);
+            score = games[1].negamax(1, 6, -127, 127, 1);
         }
         std::cout << "Expected by: " << (player == 0 ? 'A' : 'B') << ": "
                   << score << std::endl;
@@ -38,9 +38,10 @@ void demo_play() {
 }
 
 int main() {
-    demo_play();
-//    Game game = Game(2, 1);
-//    game.daisy();
+//    demo_play();
+    Game game = Game(2, 1);
+    game.daisy();
+    std::cout << game.iterative_search(0, 15000, 0) << std::endl;
 //    std::cout << game.negamax_use_movegenerator(0, 8, -127, 127, 0) << std::endl;
 //    std::cout << game.position_evaluated/1000000.0 << "M" << std::endl;
 //    return 0;

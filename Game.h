@@ -70,7 +70,6 @@ public:
     __uint128_t get_groups(__uint128_t position, const int group_size, const int direction);
     __uint128_t make_groups(__uint128_t position, const int group_size, const int direction);
     int negamax(int player, int depth, int alpha, int beta, bool play_best_move);
-    int negamax_use_movegenerator(int player, int depth, int alpha, int beta, bool play_best_move);
     int get_possible_moves(int player, __uint128_t *move_boards);
     int montecarlo(int player, int games);
     int iterative_search(int player, int time_limit, bool play_best_move);
