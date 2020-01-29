@@ -433,7 +433,7 @@ int Game::negamax(int player, int depth, int alpha, int beta, bool play_best_mov
         if (depth >= 3) {
             this->board[0] = moves[i * 2];
             this->board[1] = moves[i * 2 + 1];
-            scores[i] = this->experimental ? this->heuristic_experimental(player) : this->heuristic(player);
+            scores[i] = this->heuristic(player);
         }
     }
     if (depth >= 3) {
@@ -589,14 +589,6 @@ int Game::iterative_search(int player, int time_limit, bool play_best_move) {
     return res;
 }
 
-
-int Game::heuristic(int player) {
-    int score = this->get_score() * (1 - 2*player)*10;
-    score += count_bits(this->board[player] & HOTSPOTS) - count_bits(this->board[player ^ 1] & HOTSPOTS);
-    score += (count_bits(this->board[player ^ 1] & OUTER_RING) - count_bits(this->board[player] & OUTER_RING)) * 2;
-    return score;
-}
-
 int Game::get_average_distance_to_middle(int player) {
     int res = 0;
     __uint128_t middle = this->get_middle(this->get_middle(this->board[player]) | MIDDLE);
@@ -612,7 +604,7 @@ int Game::get_average_distance_to_middle(int player) {
     return res;
 }
 
-int Game::heuristic_experimental(int player) {
+int Game::heuristic(int player) {
     int score = this->get_score() * (1 - 2*player)*10;
     score -= get_average_distance_to_middle(player) - get_average_distance_to_middle(player^1);
     assert(score <= 127);
@@ -702,7 +694,7 @@ int Game::evaluate(int player, int depth, int alpha, int beta, high_resolution_c
         return 100+depth;
     } else if (depth == 1) {
 //        std::cout << this->to_string() << std::endl;
-        score = this->experimental ? this->heuristic_experimental(player) : this->heuristic(player);
+        score = this->heuristic(player);
     } else  {
         TranspositionData stub_result(player, depth, 0, 1, FLAG_EXACT, 0);
         this->trans_set(stub_result);
