@@ -11,7 +11,7 @@ Right now work is spend on optimizing the tree search and improving the heuristi
 
 There is no instalation. Compile and run. I recommend compiling with as much optimalization flags you can find. I found the following to be the most useful:
 ```
-g++ main.cpp Game.cpp -O3 -Ofast -march=native -flto 
+g++ main.cpp util.cpp Game.cpp -O3 -Ofast -march=native -flto 
 ./a.out
 ```
 

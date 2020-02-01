@@ -80,7 +80,7 @@ const __uint128_t OUTER_RING =
         (((__uint128_t) 0b01000000100) << ROW_SIZE * 4)  +
         (((__uint128_t) 0b01000001000) << ROW_SIZE * 3)  +
         (((__uint128_t) 0b01000010000) << ROW_SIZE * 2)  +
-        (((__uint128_t) 0b01000100000) << ROW_SIZE * 1);
+        (((__uint128_t) 0b01111100000) << ROW_SIZE * 1);
 
 const __uint128_t MIDDLE = (((__uint128_t) 0b00000100000) << ROW_SIZE * 5);
 
@@ -576,6 +576,7 @@ int Game::iterative_search(int player, int time_limit, bool play_best_move) {
             res = this->negamax(player, depth, -127, 127, play_best_move, start, time_limit);
             last_boards[0] = this->board[0];
             last_boards[1] = this->board[1];
+//            std::cout << depth << std::endl;
         } catch (int e) {
             // reset boards
             this->board[0] = last_boards[0];
@@ -606,7 +607,7 @@ int Game::get_average_distance_to_middle(int player) {
 
 int Game::heuristic(int player) {
     int score = this->get_score() * (1 - 2*player)*10;
-    score -= get_average_distance_to_middle(player) - get_average_distance_to_middle(player^1);
+    score -= get_average_distance_to_middle(player) - get_average_distance_to_middle(player ^ 1);
     assert(score <= 127);
     assert(score >= -127);
     return score;
@@ -649,13 +650,6 @@ int Game::evaluate(int player, int depth, int alpha, int beta, high_resolution_c
     }
     this->position_evaluated++;
 
-    // Experimental optimalisation: since point movement is pretty continous i.e. you can only win 1 piece per turn
-    // Once our current score exceeds beta by so much that it will still be higher at depth 0
-    // We can just alpha beta break right here instead
-    if (this->experimental) {
-        int current_score = this->heuristic(player);
-        if (current_score - ((depth) / 2) * 14 >= beta) return current_score - (depth / 2);
-    }
     TranspositionData data = this->trans_get(player, false);
     int orig_alpha = alpha;
     int orig_beta = beta;
