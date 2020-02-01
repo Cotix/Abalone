@@ -303,11 +303,7 @@ inline TranspositionData Game::trans_get(int player, bool check_transform) {
 }
 
 inline int count_bits(__uint128_t v) {
-    v = v;
-    v = v - ((v >> 1) & (__uint128_t)~(__uint128_t)0/3);                           // temp
-    v = (v & (__uint128_t)~(__uint128_t)0/15*3) + ((v >> 2) & (__uint128_t)~(__uint128_t)0/15*3);      // temp
-    v = (v + (v >> 4)) & (__uint128_t)~(__uint128_t)0/255*15;                      // temp
-    return (__uint128_t)(v * ((__uint128_t)~(__uint128_t)0/255)) >> (sizeof(__uint128_t) - 1) * 8;
+    return __builtin_popcountll(v) + __builtin_popcountll(v>>64);
 }
 
 inline int Game::get_score() {

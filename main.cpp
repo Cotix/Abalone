@@ -55,7 +55,7 @@ void stdin_play() {
         game.board[1] = str_uint128(line);
         std::cerr << "Received move:"  << std::endl;
         std::cerr << game.to_string() << std::endl;
-        int score = game.iterative_search(1, 1000, 1);
+        int score = game.iterative_search(1, 2000, 1);
         std::cerr << "Expected score: " << score << std::endl;
         std::cerr << game.to_string() << std::endl;
         std::cout << uint128_str(game.board[0]) << std::endl << uint128_str(game.board[1]) << std::endl;
