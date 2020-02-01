@@ -249,7 +249,7 @@ inline __uint128_t Game::get_sumitos(__uint128_t board, __uint128_t opponent, co
     }
     result = (opponent & SHIFT(result, direction));
     if (group_size == 3) {
-        result = SHIFT(result, direction);
+        result = (~board & SHIFT(result, direction));
     }
     result = (result & (SHIFT((~(board|opponent)), -direction) | ~PLAYING_FIELD));
     return result;
