@@ -30,6 +30,7 @@ const int DOWN_RIGHT = -ROW_SIZE;
 const int DIRECTIONS[] = {UP_LEFT, UP_RIGHT, LEFT, RIGHT, DOWN_LEFT, DOWN_RIGHT};
 const int DIRECTION_COUNT = 6;
 const int TANGENT_DIRECTIONS[] = {LEFT, UP_RIGHT, 0, LEFT, UP_LEFT, 0, UP_LEFT, UP_RIGHT, 0, UP_LEFT, UP_RIGHT, 0, LEFT, DOWN_RIGHT, 0, LEFT, DOWN_LEFT};
+const int PIECE_VALUES[] = {13, 12, 9, 6, 5, 5, 5, 5, 5, 5, 5, 5};
 const __uint128_t ONE = 1;
 const __uint128_t MSB = ONE<<127;
 
@@ -554,13 +555,32 @@ __uint128_t Game::get_middle(__uint128_t board){
 
 }
 
+int Game::mtdf_search(int player, int f, int depth, bool play_best_move, high_resolution_clock::time_point start, int time_limit) {
+    int g = f;
+    int upper = 128;
+    int lower = -128;
+    int beta;
+    while (lower < upper) {
+        beta = MAX(g, lower + 1);
+        g = this->negamax(player, depth, beta - 1, beta, 0, start, time_limit);
+        if (g < beta) {
+            upper = g;
+        } else {
+            lower = g;
+        }
+    }
+    if (play_best_move) {
+        this->negamax(player, depth, beta - 1, beta, 1, start, time_limit);
+    }
+    return g;
+}
 
 int Game::iterative_search(int player, int time_limit, bool play_best_move) {
     __uint128_t original_boards[2] = {this->board[0], this->board[1]};
     __uint128_t last_boards[2];
     high_resolution_clock::time_point start = high_resolution_clock::now();
-    int res = -127;
-    for (int depth = 1; depth < 27; depth++) {
+    int res = this->experimental ? this->heuristic(player) : -127;
+    for (int depth = 2; depth < 26; depth += 2) {
         high_resolution_clock::time_point now = high_resolution_clock::now();
         int time_span = duration_cast<milliseconds>(now - start).count();
         if (time_span >= time_limit) {
@@ -569,10 +589,10 @@ int Game::iterative_search(int player, int time_limit, bool play_best_move) {
         try {
             this->board[0] = original_boards[0];
             this->board[1] = original_boards[1];
-            res = this->negamax(player, depth, -127, 127, play_best_move, start, time_limit);
+            res = this->experimental ? this->mtdf_search(player, res, depth, play_best_move, start, time_limit) : this->negamax(player, depth, -127, 127, play_best_move, start, time_limit);
+            last_depth = depth;
             last_boards[0] = this->board[0];
             last_boards[1] = this->board[1];
-//            std::cout << depth << std::endl;
         } catch (int e) {
             // reset boards
             this->board[0] = last_boards[0];
@@ -586,24 +606,25 @@ int Game::iterative_search(int player, int time_limit, bool play_best_move) {
     return res;
 }
 
-int Game::get_average_distance_to_middle(int player) {
+int Game::get_total_piece_value(int player) {
     int res = 0;
     __uint128_t middle = this->get_middle(this->get_middle(this->board[player]) | MIDDLE);
     __uint128_t board = this->board[player];
     while(board != 0) {
         __uint128_t piece = (board & ~(board - 1));
         board ^= piece;
+        int ctr = 0;
         while ((piece&middle) == 0) {
             piece = get_neighbours(piece, 1, piece);
-            res++;
+            ctr++;
         }
+        res += PIECE_VALUES[ctr];
     }
     return res;
 }
 
 int Game::heuristic(int player) {
-    int score = this->get_score() * (1 - 2*player)*10;
-    score -= get_average_distance_to_middle(player) - get_average_distance_to_middle(player ^ 1);
+    int score = get_total_piece_value(player) - get_total_piece_value(player^1);
     assert(score <= 127);
     assert(score >= -127);
     return score;

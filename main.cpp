@@ -19,11 +19,11 @@ void demo_play() {
         while (!games[0].is_over() && moves <= 600) {
             moves++;
             int score;
-            score = games[player].iterative_search(player, 5000, 1);
+            score = games[player].iterative_search(player, 1000, 1);
 //            std::cout << "Expected by: " << (player == 0 ? 'A' : 'B') << ": "
 //                      << score << std::endl;
+//            std::cout << "Searched depth: " << games[player].last_depth << std::endl;
 //            std::cout << games[player].to_string() << std::endl;
-
             games[player ^ 1].board[0] = games[player].board[0];
             games[player ^ 1].board[1] = games[player].board[1];
             player ^= 1;
@@ -64,5 +64,6 @@ void stdin_play() {
 }
 
 int main() {
+//    demo_play();
     stdin_play();
 }

@@ -67,10 +67,11 @@ struct TranspositionData {
 class Game {
     unsigned int players;
     __uint128_t *transpositions = 0;
+
     std::string _print_bits(unsigned int from, unsigned int to);
     bool experimental;
 public:
-
+    int last_depth;
     __uint128_t get_neighbours(__uint128_t position, const int group_size, const __uint128_t group);
     __uint128_t get_groups(__uint128_t position, const int group_size, const int direction);
     __uint128_t make_groups(__uint128_t position, const int group_size, const int direction);
@@ -79,7 +80,10 @@ public:
     int montecarlo(int player, int games);
     int iterative_search(int player, int time_limit, bool play_best_move);
     int montecarlo_play(int player, int games);
+    int next_guess(int a, int b, int subtree_count);
+    int mtdf_search(int player, int f, int depth, bool play_best_move, high_resolution_clock::time_point start, int time_limit);
     int random_play(int player);
+    int get_total_piece_value(int player);
     __uint128_t get_sumitos(__uint128_t board, __uint128_t opponent, const int group_size, const int direction);
     int evaluate(int player, int depth, int alpha, int beta, high_resolution_clock::time_point start, int time_limit);
     unsigned int piece_count[4];
@@ -115,10 +119,6 @@ public:
     int is_over();
 
     __uint128_t get_middle(__uint128_t board);
-
-    int get_average_distance_to_middle(int player);
-
-    int heuristic_experimental(int player);
 };
 
 
