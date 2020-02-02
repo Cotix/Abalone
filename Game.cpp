@@ -686,8 +686,8 @@ int Game::evaluate(int player, int depth, int alpha, int beta, high_resolution_c
 
     if (data.depth > depth && data.stub == 1) {
         // Draw!
-//        TranspositionData draw_result(player, depth, 0, 0, FLAG_LOWER, 0);
-//        this->trans_set(draw_result);
+        TranspositionData draw_result(player, depth, 0, 0, FLAG_LOWER, 0);
+        this->trans_set(draw_result);
         return 0;
     }
 
