@@ -579,8 +579,8 @@ int Game::iterative_search(int player, int time_limit, bool play_best_move) {
     __uint128_t original_boards[2] = {this->board[0], this->board[1]};
     __uint128_t last_boards[2];
     high_resolution_clock::time_point start = high_resolution_clock::now();
-    int res = this->experimental ? this->heuristic(player) : -127;
-    for (int depth = 2; depth < 26; depth += 2) {
+    int res =  -127;
+    for (int depth = 2; depth < 26; depth += 1) {
         high_resolution_clock::time_point now = high_resolution_clock::now();
         int time_span = duration_cast<milliseconds>(now - start).count();
         if (time_span >= time_limit) {
@@ -589,7 +589,7 @@ int Game::iterative_search(int player, int time_limit, bool play_best_move) {
         try {
             this->board[0] = original_boards[0];
             this->board[1] = original_boards[1];
-            res = this->experimental ? this->mtdf_search(player, res, depth, play_best_move, start, time_limit) : this->negamax(player, depth, -127, 127, play_best_move, start, time_limit);
+            res = this->negamax(player, depth, -127, 127, play_best_move, start, time_limit);
             last_depth = depth;
             last_boards[0] = this->board[0];
             last_boards[1] = this->board[1];
@@ -608,7 +608,7 @@ int Game::iterative_search(int player, int time_limit, bool play_best_move) {
 
 int Game::get_total_piece_value(int player) {
     int res = 0;
-    __uint128_t middle = this->get_middle(this->get_middle(this->board[player]) | MIDDLE);
+    __uint128_t middle = this->experimental ? MIDDLE : this->get_middle(this->get_middle(this->board[player]) | MIDDLE);
     __uint128_t board = this->board[player];
     while(board != 0) {
         __uint128_t piece = (board & ~(board - 1));
